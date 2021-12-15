@@ -7,6 +7,8 @@
 #include <signal.h>
 #include <sys/time.h>
 
+#include <unistd.h> 
+
 #define FALSE 0
 #define TRUE 1
 #define STACK_SIZE 4096
@@ -141,17 +143,15 @@ void timer_handler ( int sig ) {
     // add the running to the ready queue
     running = running->next;
     addToReadyQ(susp);
-   
     // find the next thread for execution
     green_t *next = getReadyFromQ();
-
     running = next ;
-    swapcontext( susp->context , next->context) ;
+    swapcontext( susp->context , next->context);
 }
 
 void init(){
     getcontext(&main_cntx);
-
+    
     sigemptyset(&block);
     sigaddset(&block , SIGVTALRM);
 
@@ -168,14 +168,13 @@ void init(){
     setitimer(ITIMER_VIRTUAL, &period, NULL);
 }
 
-
-
-void green_thread ( ) {
+void green_thread(){
+    sigprocmask(SIG_BLOCK, &block , NULL);
     green_t * this = running;
     void * result = (*this->fun) (this->arg);
     // place waiting (joining) thread in ready queue
     if(this->join != NULL){
-        addToReadyQ(this->join);
+        addToReadyQ(this->join); //*state change 
     }
     // save result of execution
     this->retval= result; 
@@ -186,13 +185,14 @@ void green_thread ( ) {
     
     running = next;
     setcontext(next->context);
+    sigprocmask(SIG_UNBLOCK, &block , NULL);
 }
 
 int green_create(green_t *new, void *(*fun)(void*), void *arg){
+    sigprocmask(SIG_UNBLOCK, &block , NULL);
 
     ucontext_t *cntx = (ucontext_t *)malloc(sizeof(ucontext_t));
     getcontext(cntx);
-
     void *stack = malloc(STACK_SIZE);
 
     cntx->uc_stack.ss_sp = stack;
@@ -207,24 +207,30 @@ int green_create(green_t *new, void *(*fun)(void*), void *arg){
     new->retval = NULL;
     new->zombie = FALSE;
     // add new to the ready queue 
-    addToReadyQ(new);
+    addToReadyQ(new);   //*state change 
 
-    return 0 ;
+    sigprocmask(SIG_UNBLOCK, &block , NULL);
+    return 0;
 }
 
 int green_yield(){
-green_t *susp = running;
-// add susp to ready queue
-addToReadyQ(susp);
-// select the next thread for execution
-green_t *next = getReadyFromQ();
+    sigprocmask(SIG_BLOCK, &block , NULL);
 
-running = next ;
-swapcontext (susp->context , next->context) ;
-return 0 ;
+    green_t *susp = running;
+    // add susp to ready queue
+    addToReadyQ(susp);
+    // select the next thread for execution
+    green_t *next = getReadyFromQ();
+
+    running = next;
+    swapcontext (susp->context , next->context); //*state change 
+    sigprocmask(SIG_UNBLOCK, &block , NULL);
+    return 0 ;
 }
 
 int green_join ( green_t * thread , void **res ) {
+    sigprocmask(SIG_BLOCK, &block , NULL);
+
     if(!thread->zombie ){
         green_t * susp = running; 
         //add as joining thread - susp is waiting to join
@@ -232,14 +238,15 @@ int green_join ( green_t * thread , void **res ) {
         // select the next thread for execution
         green_t *next = getReadyFromQ();
         running = next;
-        swapcontext (susp->context , next->context);
+        swapcontext (susp->context , next->context); //*state change 
     }
 
     // collect result ----
     res = thread->retval;
     // free context
     free(thread->context); 
-    
+
+    sigprocmask(SIG_UNBLOCK, &block , NULL);
     return 0 ;
 }
 
@@ -283,8 +290,9 @@ void green_cond_init(green_cond_t* cond){
 }
 
 void green_cond_wait(green_cond_t* cond){
+    sigprocmask(SIG_BLOCK, &block , NULL);
     green_t * susp = running;  
-    addToCondQ(susp, cond); 
+    addToCondQ(susp, cond);     //*state change 
     /*
     if(p != NULL){
         while(p->next != NULL){
@@ -298,6 +306,7 @@ void green_cond_wait(green_cond_t* cond){
 
     running = next; 
     swapcontext (susp->context , next->context);
+    sigprocmask(SIG_UNBLOCK, &block , NULL);
 }
 
 //suspend the current thread on the condition
@@ -315,9 +324,11 @@ void green_cond_wait(green_cond_t* cond){
 
 //move the first suspended thread to the ready queue
 void green_cond_signal(green_cond_t* cond){
+    sigprocmask(SIG_BLOCK, &block , NULL);
     if(cond->h != NULL){
-        addToReadyQ(cond->h);
+        addToReadyQ(cond->h);   //*state change 
         cond->h = cond->h->next; //? glömde att flytta head pekarn
     }
+    sigprocmask(SIG_UNBLOCK, &block , NULL);
 }
 

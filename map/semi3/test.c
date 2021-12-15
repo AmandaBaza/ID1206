@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "green.h"
-/*
-void *test(void *arg){
+
+void *test1(void *arg){
     int i = *(int*) arg ;
     int loop = 4;
     while( loop > 0){
@@ -10,13 +10,27 @@ void *test(void *arg){
         green_yield();
     }
 }
-*/
 
 int flag = 0 ;
 green_cond_t cond ;
+void * test2 ( void * arg ) {
+    int id = *( int *) arg ;
+    int loop = 4;
+    while ( loop > 0 ) {
+        if( flag == id ) {
+            printf ("thread %d : %d\n" , id , loop);
+            loop --;
+            flag = ( id + 1 ) % 2 ;
+            green_cond_signal (&cond) ;
+        }else{
+            green_cond_wait(&cond) ;
+        }
+    }
+}
+
 void * test ( void * arg ) {
     int id = *( int *) arg ;
-    int loop = 4 ;
+    int loop = 4;
     while ( loop > 0 ) {
         if( flag == id ) {
             printf ("thread %d : %d\n" , id , loop);
