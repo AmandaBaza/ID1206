@@ -27,11 +27,6 @@ struct head
     struct head *prev;//8B
 };
 
-struct head *getFlist(){
-    return flist;
-}
-
-
 //*in the arena, NOT free list
 struct head *after(struct head *block)
 {
@@ -46,22 +41,36 @@ struct head *before(struct head *block)
 struct head * flist;
 //** borde va rätt
 void detach (struct head *block) {
-    if (block->next != NULL){
+    /*if (block->next != NULL){
         block->next->prev = block->prev;
     }if (block->prev != NULL){
+        block->prev->next = block->next; //!
+    }if(block->next != NULL && block->prev != NULL)
+        flist = NULL; //if flist only had one block*/
+
+    if(block->next != NULL)
+        block->next->prev = block->prev;
+
+    if(block->prev != NULL)
         block->prev->next = block->next;
-    }else
-        flist = NULL; //Since flist only had the block
+
+    else{
+        flist = block->next;
+    }
 }
 //** borde va rätt
-void insert (struct head *block) {    
-    block->next = flist; 
+void insert (struct head *block) {   
+    block->next = flist; //!
     block->prev = NULL;  
     
     if (flist != NULL){
         flist->prev = block;
     }
     flist = block; //block is now head
+}
+
+struct head *getFlist(){
+    return (struct head *) flist;
 }
 
 //* 
@@ -115,33 +124,78 @@ struct head *new(){
     return new ; 
 }
 
-struct head *find(int fsize){
+struct head *find(int fsize)
+{
+    struct head *f = flist;
+
+    while(f != NULL && f->size < fsize)
+        f = f->next;
+
+    if(f == NULL)
+        return NULL;
+
+    detach(f);
+
+    if(f->size > LIMIT(fsize)){
+        struct head *rem = split(f, fsize);
+        insert(f);
+        f = rem;
+    }
+
+    f->free = FALSE;
+    f->next->bfree = FALSE;
+
+    return f;
+}
+
+struct head *findBACKUP(int fsize){
     struct head *found;
     struct head *block;
-    if(flist != NULL){
-        block = flist;
-        while(block != NULL){
-            if(block->size >= fsize){
+    struct head *hold;
+    if(flist == NULL){
+        block = new();
+        insert(block);
+    }
+    //if(flist != NULL){
+    block = flist;
+    while(block != NULL){
+        if(block->size >= fsize){
+            if(block->size - fsize >= 32){//32 = 24+8
                 found = split(block, fsize);
                 detach(found);
-                block = after(found);
-                insert(block);
-                block->bfree = FALSE;
+
+                hold = after(found);
+                insert(hold); 
+                found->free = FALSE;
+                hold->bfree = FALSE;
+                printf("break1");
+                break;
+            }else{
+                found = block;
+                detach(found);
+                hold = after(found);
+                found->free = FALSE;
+                hold->bfree = FALSE;
+                printf("break2");
                 break;
             }
-            block= block->next;
-        } 
-    }else{
+        }
+        printf("next");
+        block= block->next;
+    } 
+    printf("broke ??");
+
+    /*}else{
         //! create arena  -freelist kmr alltid va tom?
         //arena = new();
         block = new();
-        insert(block);
+        //insert(block);
         found = split(block, fsize);
         detach(found);
         block = after(found);
-        insert(block);
+        insert(block);  -tabort block är kvar i freelist
         block->bfree = FALSE;
-    }
+    }*/
     return found;
 }
 
