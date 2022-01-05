@@ -44,7 +44,7 @@ void detach (struct head *block) {
     /*if (block->next != NULL){
         block->next->prev = block->prev;
     }if (block->prev != NULL){
-        block->prev->next = block->next; //!
+        block->prev->next = block->next; 
     }if(block->next != NULL && block->prev != NULL)
         flist = NULL; //if flist only had one block*/
 
@@ -60,7 +60,7 @@ void detach (struct head *block) {
 }
 //** borde va rätt
 void insert (struct head *block) {   
-    block->next = flist; //!
+    block->next = flist; 
     block->prev = NULL;  
     
     if (flist != NULL){
@@ -148,7 +148,7 @@ struct head *find(int fsize)
     return f;
 }
 
-struct head *findBACKUP(int fsize){
+struct head *find3(int fsize){
     struct head *found;
     struct head *block;
     struct head *hold;
@@ -186,7 +186,6 @@ struct head *findBACKUP(int fsize){
     printf("broke ??");
 
     /*}else{
-        //! create arena  -freelist kmr alltid va tom?
         //arena = new();
         block = new();
         //insert(block);
@@ -284,7 +283,7 @@ void dfree (void *memory) {
         // memory; 
         //* (struct head*) memory; 
 
-        struct head * aft = after(block); //! -seg fault pga block
+        struct head * aft = after(block);
         block->free = TRUE;
         aft->bfree = TRUE;
         insert(block); 

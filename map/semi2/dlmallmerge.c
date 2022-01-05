@@ -275,16 +275,7 @@ void dfree (void *memory) {
     if (memory != NULL) {
         
         struct head * block = (struct head*) MAGIC(memory);
-        //struct head * block =  MAGIC(memory);
-
-        //de va så min kod såg ut från början, ig annat va fel
-        //* (struct head*) ((char*) memory - HEAD);
-        //* (struct head*) ((char*) memory);
-        // memory - HEAD; // found + HEAD
-        // memory; 
-        //* (struct head*) memory; 
-
-        struct head * aft = after(block); //! -seg fault pga block
+        struct head * aft = after(block); 
         block->free = TRUE;
         aft->bfree = TRUE;
         insert(block); 
