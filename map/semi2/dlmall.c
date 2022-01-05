@@ -27,6 +27,11 @@ struct head
     struct head *prev;//8B
 };
 
+struct head *getFlist(){
+    return flist;
+}
+
+
 //*in the arena, NOT free list
 struct head *after(struct head *block)
 {
@@ -100,8 +105,8 @@ struct head *new(){
     new->size = size; 
     struct head * sentinel = after(new);
     /* only touch the status fields */ //??
-    sentinel->bfree = TRUE; //new->free= TRUE ??
-    sentinel->bsize = size; // = sentinel->bsize ? 
+    sentinel->bfree = TRUE; 
+    sentinel->bsize = size; 
     sentinel->free = FALSE;
     sentinel->size = 0; 
 
@@ -110,18 +115,6 @@ struct head *new(){
     return new ; 
 }
 
-//sammanfattning av mall instrutioner
-
-// and unlink (detach) from flist
-// if flist == empty --> create the arena
-
-//if fblock big enough to splitt in 2 
-//(size exkl. head =< 40)-> split -> rest i flist
-
-//detatch (fblock)?? update block efter Taken block?
-//fblock->free= FALSE 
-
-//'pointer = HIDE() ?????
 struct head *find(int fsize){
     struct head *found;
     struct head *block;
@@ -129,7 +122,6 @@ struct head *find(int fsize){
         block = flist;
         while(block != NULL){
             if(block->size >= fsize){
-                //*found = split(block, fsize);
                 found = split(block, fsize);
                 detach(found);
                 block = after(found);
@@ -142,7 +134,6 @@ struct head *find(int fsize){
     }else{
         //! create arena  -freelist kmr alltid va tom?
         //arena = new();
-        //block = (struct head *) new();
         block = new();
         insert(block);
         found = split(block, fsize);
@@ -185,7 +176,6 @@ struct head *find2(int fsize){
     //}
 }
 
-// TODO Head för mkt
 size_t adjust(size_t req){
     if(req < 8){
         //reunerar 8 om req < 8, annars req i form av int
