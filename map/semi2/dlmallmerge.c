@@ -35,10 +35,20 @@ struct head *after(struct head *block)
 
 struct head *before(struct head *block)
 {
-    return (struct head*)((char*) block - HEAD - block->bsize); //ändrade: tog bort -1
+    return (struct head*) ((char*) block - HEAD - block->bsize); //ändrade: tog bort -1
 };
 
 struct head * flist;
+
+void printFlist(){
+    struct head *h = flist;
+    printf("All sizes: ");
+    while (h != NULL){    
+        printf(" %d ", (int) h->size);
+        h = h->next;
+    }printf("\n");
+}
+
 //** borde va rätt
 void detach (struct head *block) {
     /*if (block->next != NULL){
@@ -60,7 +70,7 @@ void detach (struct head *block) {
 }
 //** borde va rätt
 void insert (struct head *block) {   
-    block->next = flist; //!
+    block->next = flist; 
     block->prev = NULL;  
     
     if (flist != NULL){
@@ -69,9 +79,7 @@ void insert (struct head *block) {
     flist = block; //block is now head
 }
 
-struct head *getFlist(){
-    return (struct head *) flist;
-}
+
 
 //* 
 struct head *split(struct head * block , int size){
@@ -86,6 +94,7 @@ struct head *split(struct head * block , int size){
 
     struct head *aft = after(splt);
     aft->bsize = splt->size;
+    //aft->bfree = splt->free;
 
     return splt;
 }
@@ -120,12 +129,14 @@ struct head *new(){
     sentinel->size = 0; 
 
     /*this is the only arena we have */
-    arena = (struct head *) new ;
-    return new ; 
+    arena = (struct head *) new;
+    return new; 
 }
 
-struct head *find(int fsize)
-{
+struct head *find(int fsize){
+    if(flist == NULL){
+        insert(new());
+    }
     struct head *f = flist;
 
     while(f != NULL && f->size < fsize)
@@ -143,7 +154,9 @@ struct head *find(int fsize)
     }
 
     f->free = FALSE;
-    f->next->bfree = FALSE;
+    //if(f->next != NULL)
+        //f->next->bfree = FALSE;
+    after(f)->bfree = FALSE;
 
     return f;
 }
@@ -258,12 +271,44 @@ size_t adjust(size_t req){
     */
 }
 
+struct head *merge (struct head * block) {
+    struct head * aft = after(block);
+    if(block->bfree) {
+        /*unlink the block before*/
+        struct head *bef = before(block);
+        detach(bef);
+        /*calculate and set the total size of the merged blocks */
+        int newSize = block->bsize + HEAD + block->size;
+        //! bef->size = newSize;  set size ?? 
+        /*update the block after the mered blocks*/
+        aft->bsize = newSize;
+        aft->bfree = TRUE; //! ??
+        /*continue with the merged block*/
+        block = bef;
+        block->size = newSize;
+        block->free = TRUE; //! ??
+    }
+    if(aft->free){
+        /*unlink the block*/
+        detach(aft);
+        /*calculate and set the total size of merged blocks*/
+        int newSize = block->size + HEAD + aft->size;
+        //! set ??
+        /*update the block after the merged block*/
+        aft = after(aft);
+        aft->bsize = newSize;
+        aft->bfree = TRUE; //! ??
+    }
+        return block;
+}
+
+
 void *dalloc(size_t request) {
     if (request <= 0 ){
         return NULL; 
     }
     int size = adjust(request);
-    printf("%d \n", size);
+    printf("dalloc: %d \n", size);
     struct head * taken = (struct head*) find(size);
     if (taken == NULL)
         return NULL;
@@ -272,10 +317,13 @@ void *dalloc(size_t request) {
 }
 
 void dfree (void *memory) {
+    printf("freeing..\n");
     if (memory != NULL) {
-        
         struct head * block = (struct head*) MAGIC(memory);
         struct head * aft = after(block); 
+        printf("before merge:");
+        printFlist();
+        block = merge(block);
         block->free = TRUE;
         aft->bfree = TRUE;
         insert(block); 

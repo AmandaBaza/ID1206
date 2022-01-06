@@ -6,7 +6,7 @@ void dfree(void* memory);
 void *dalloc(size_t request);
 struct head *after(struct head *block);
 size_t adjust(size_t req);
-struct head *getFlist();
+void printFlist();
 
 struct head
 {

@@ -1,12 +1,5 @@
 #include <stdio.h>
 #include "dlmall.h"
-void printAll(struct head *h){
-    printf("All sizes: \n");
-    while (h != NULL){    
-        printf("%d\n", (int) h->size);
-        h = h->next;
-    }
-}
 int main()
 {
     /*
@@ -26,19 +19,22 @@ int main()
     }
     printAll(getFlist());
     printf("\ndone");*/
-
+    
     void *a = dalloc((size_t) 6);
-    //printAll(getFlist());
+    printFlist();
     void *b = dalloc((size_t) 8);
-    //printAll(getFlist());
+    printFlist();
     void *c = dalloc((size_t) 16);
-    //printAll(getFlist());
-
-    dfree(a);
-    //printAll(getFlist());
+    printFlist();
+    
     dfree(b);
-    //printAll(getFlist());
+    printf("after b merge:");
+    printFlist();
+    dfree(a);
+    printf("after a merge:");
+    printFlist();
     dfree(c);
-    //printAll(getFlist());
+    printf("after c merge:");
+    printFlist();
     return 0;
 }
